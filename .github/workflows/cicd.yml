@@ -11,5 +11,9 @@ concurrency:
   cancel-in-progress: true
 jobs:
   cicd:
+    # The reusable asks for these; hanzo-js repos give the token read only, and a called workflow cannot raise it.
+    permissions:
+      contents: write
+      packages: write
     uses: hanzoai/ci/.github/workflows/build.yml@v2
     secrets: inherit
