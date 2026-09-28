@@ -49,14 +49,14 @@ d.answers.urgency.legend[3]; // "right now"
 | builder | criteria | answer |
 |---|---|---|
 | `choice(instructions, criteria)` | `{ label: description \| null }` or `[label, …]` | `choice`, `confidence`, `probabilities` by label |
-| `noul(instructions, criteria?)` | `{ true?: description, false?: description }` | `noul`: P(true) |
+| `noul(instructions?, criteria?)` | `{ true?: description, false?: description }` | `noul`: P(true); `confidence`: \|2p − 1\| |
 | `score(instructions, criteria)` | `[level0, level1, …]`, lowest first | `score`: Σ i·pᵢ; `confidence`; `legend` and `probabilities` keyed `"0"`, `"1"`, … |
 
-`confidence` is (n·p_max − 1)/(n − 1): 0 when every option is equally likely, 1 when one takes all the mass. Answers
-also carry `answer_confidence`, the calibrated probability of the answer given.
+A choice's or score's `confidence` is (n·p_max − 1)/(n − 1): 0 when every option is equally likely, 1 when one takes
+all the mass. Answers also carry `answer_confidence`, the calibrated probability of the answer given.
 
-Instructions, descriptions and state take text, a JSON object or a JSON array. Give a noul its criteria, or ask a
-choice: Kai answers a bare yes/no question less reliably than one whose true and false are described.
+Instructions are optional; they, descriptions and state take text, a JSON object or a JSON array. Give a noul its
+criteria, or ask a choice: Kai answers a bare yes/no question less reliably than one whose true and false are described.
 
 ## Configuration
 
@@ -80,21 +80,21 @@ A status outside 2xx throws its class, carrying the server's sentence as `messag
 
 | status | class |
 |---|---|
-| 400 | `BadRequestError` |
-| 401 | `AuthenticationError` |
-| 402 | `PaymentRequiredError` |
-| 403 | `PermissionDeniedError` |
+| 400 malformed JSON, unknown model | `BadRequestError` |
+| 401 bad key | `AuthenticationError` |
+| 402 insufficient balance | `PaymentRequiredError` |
+| 403 key kind not allowed | `PermissionDeniedError` |
 | 404 | `NotFoundError` |
-| 422 | `UnprocessableEntityError` |
-| 429 | `RateLimitError` |
-| 5xx | `InternalServerError` |
+| 422 outside the schema, or `code` `state_too_long` | `UnprocessableEntityError` |
+| 429 rate limited | `RateLimitError` |
+| 5xx, 529 overloaded | `InternalServerError` |
 
 No response throws `APIConnectionError`, or `APITimeoutError` past the timeout; an aborted signal throws
 `APIUserAbortError`. Every class extends `KaiError`.
 
-Two retries by default, on 408, 409, 429, 5xx, connection errors and timeouts, backing off from 0.5 s doubling to
-8 s, less up to 25% at random. `Retry-After` and `retry-after-ms` are honoured up to 60 s. Each retry sends
-`X-Kai-Retry-Count`.
+Two retries by default, on 408, 409, 429, 5xx (529 included), connection errors and timeouts, backing off from 0.5 s
+doubling to 8 s, less up to 25% at random. `Retry-After` and `retry-after-ms` are honoured up to 60 s. Each retry
+sends `X-Kai-Retry-Count`.
 
 ```ts
 const kai = new Kai({ retry: { maxRetries: 4, httpStatuses: new Set([429, 503]) } });
@@ -109,6 +109,11 @@ const raw = await kai.decide(request).asResponse(); // body unread
 
 const models = await kai.models.list(); // the models that answer decisions: kai, hanzo/kai
 ```
+
+## Jev compatibility
+
+`@hanzo/kai/jev` answers in Jev's shapes on `/v1/systemone`, so a TypeSafe program ports by its import alone:
+`import { choice, noul, score, Client as TypeSafeClient } from "@hanzo/kai/jev"`. It answers model `kai` only.
 
 ## License
 

@@ -127,3 +127,46 @@ test("bodies that are not JSON: text becomes the message, an empty body names th
   const shapeless = await failure(400, JSON.stringify({ detail: [1] }));
   assert.equal(shapeless.message, "HTTP 400");
 });
+
+test("the compatible path's FastAPI bodies: a detail list, or a detail sentence", async () => {
+  const invalid = await failure(
+    422,
+    JSON.stringify({
+      detail: [
+        { loc: ["body", "questions", "q", "criteria"], msg: "Input should be a valid list", type: "list_type" },
+        { loc: ["body", "state"], msg: "Field required", type: "missing" },
+      ],
+    }),
+    { ...JSON_TYPE, "x-request-id": "req_422" },
+  );
+  assert.ok(invalid instanceof UnprocessableEntityError);
+  assert.equal(invalid.message, "questions.q.criteria: Input should be a valid list; state: Field required");
+  assert.equal(invalid.code, "list_type");
+  assert.equal(invalid.requestId, "req_422");
+  const unknown = await failure(400, JSON.stringify({ detail: "Unknown model: jev-latest" }), JSON_TYPE);
+  assert.ok(unknown instanceof BadRequestError);
+  assert.equal(unknown.message, "Unknown model: jev-latest");
+  assert.equal(unknown.code, undefined);
+  const unpaid = await failure(402, JSON.stringify({ detail: "insufficient balance" }), JSON_TYPE);
+  assert.ok(unpaid instanceof PaymentRequiredError);
+  assert.equal(unpaid.message, "insufficient balance");
+});
+
+test("a state past what the model reads: 422 with code state_too_long", async () => {
+  const body = { error: { code: "state_too_long", message: "the state and a question need 9120 tokens; kai reads 8192" } };
+  const error = await failure(422, JSON.stringify(body), JSON_TYPE);
+  assert.ok(error instanceof UnprocessableEntityError);
+  assert.equal(error.code, "state_too_long");
+  assert.equal(error.message, "the state and a question need 9120 tokens; kai reads 8192");
+});
+
+test("a 529 is a server error that says when to come back", async () => {
+  const error = await failure(529, JSON.stringify({ error: { code: 529, message: "overloaded" } }), {
+    ...JSON_TYPE,
+    "retry-after": "2",
+    "retry-after-ms": "1500",
+  });
+  assert.ok(error instanceof InternalServerError);
+  assert.equal(error.message, "overloaded");
+  assert.equal(error.retryAfter, 1.5);
+});

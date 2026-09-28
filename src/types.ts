@@ -18,29 +18,29 @@ export type Description = EntryType | null;
 /** A yes/no question: `noul` answers P(true). */
 export interface NoulQuestion {
   readonly type: "noul";
-  /** The question or statement Kai judges. */
-  readonly instructions: EntryType;
+  /** The question or statement Kai judges; optional. */
+  readonly instructions?: EntryType | null;
   /** What true and what false mean; either side, both, or neither. */
   readonly criteria?: { readonly true?: Description; readonly false?: Description } | null;
 }
 
-/** Choice labels: a map of label to description, or a list of labels. */
+/** Choice labels, at least two: a map of label to description, or a list of labels. */
 export type ChoiceCriteria = { readonly [label: string]: Description } | readonly string[];
 
 /** One label of several. */
 export interface ChoiceQuestion<T extends ChoiceCriteria = ChoiceCriteria> {
   readonly type: "choice";
-  readonly instructions: EntryType;
+  readonly instructions?: EntryType | null;
   readonly criteria: T;
 }
 
-/** Score levels, lowest first; each level needs a description. */
+/** Score levels, lowest first, at least one; each level needs a description. */
 export type ScoreCriteria = readonly [EntryType, ...EntryType[]];
 
 /** One level of an ordered scale. */
 export interface ScoreQuestion<T extends ScoreCriteria = ScoreCriteria> {
   readonly type: "score";
-  readonly instructions: EntryType;
+  readonly instructions?: EntryType | null;
   readonly criteria: T;
 }
 
@@ -65,6 +65,8 @@ export interface NoulAnswer {
   readonly type: "noul";
   /** Probability the statement holds, 0 to 1. */
   readonly noul: number;
+  /** |2p − 1|: 0 at even odds, 1 when certain. */
+  readonly confidence?: number;
   /** Calibrated probability of the more likely side. */
   readonly answer_confidence?: number;
   readonly action?: Action;

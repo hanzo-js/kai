@@ -107,6 +107,19 @@ test("builders keep what they are given and omit a noul's absent criteria", () =
   assert.deepEqual(score("Risk?", ["low", { level: "high" }]).criteria, ["low", { level: "high" }]);
 });
 
+test("instructions are optional: builders given none send none", async () => {
+  assert.deepEqual(noul(), { type: "noul" });
+  assert.deepEqual(noul(null, { true: "spam" }), { type: "noul", criteria: { true: "spam" } });
+  assert.deepEqual(choice(undefined, { yes: null, no: null }), { type: "choice", criteria: { yes: null, no: null } });
+  assert.deepEqual(score(null, ["low", "high"]), { type: "score", criteria: ["low", "high"] });
+  const { kai, calls } = client();
+  await kai.decide({ state: "s", questions: { q: noul(), c: choice(null, ["a", "b"]) } });
+  assert.deepEqual((calls[0]?.body as { questions: unknown }).questions, {
+    q: { type: "noul" },
+    c: { type: "choice", criteria: ["a", "b"] },
+  });
+});
+
 test("builders refuse criteria of the wrong shape", () => {
   const loose = (v: unknown) => v as never;
   assert.throws(() => score("Risk?", loose({ 0: "low", 1: "high" })), {

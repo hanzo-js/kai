@@ -13,34 +13,47 @@ import type {
 const LABELS = "choice criteria must map labels to descriptions, or list the labels";
 const LEVELS = "score criteria must list the levels, lowest first";
 
+/** The question, without `instructions` when there are none. */
+function ask<Q>(type: string, instructions: EntryType | null | undefined, rest: object): Q {
+  return (instructions == null ? { type, ...rest } : { type, instructions, ...rest }) as Q;
+}
+
 /**
  * A yes/no question; the answer's `noul` is P(true).
  *
- * @param instructions - The question, or a statement Kai judges true or false.
+ * @param instructions - The question, or a statement Kai judges true or false; optional.
  * @param criteria - What true and false mean. Kai answers more reliably with them.
  */
-export function noul(instructions: EntryType, criteria?: NoulQuestion["criteria"]): NoulQuestion {
-  return criteria === undefined ? { type: "noul", instructions } : { type: "noul", instructions, criteria };
+export function noul(instructions?: EntryType | null, criteria?: NoulQuestion["criteria"]): NoulQuestion {
+  return ask("noul", instructions, criteria === undefined ? {} : { criteria });
 }
 
 /**
  * One label of several; the answer's `choice` is typed as those labels.
  *
+ * @param instructions - The question; `null` or `undefined` sends none.
  * @param criteria - Labels mapped to descriptions (`null` for none), or a list of labels.
  */
-export function choice<const T extends ChoiceCriteria>(instructions: EntryType, criteria: T): ChoiceQuestion<T> {
+export function choice<const T extends ChoiceCriteria>(
+  instructions: EntryType | null | undefined,
+  criteria: T,
+): ChoiceQuestion<T> {
   if (!record(criteria) && !Array.isArray(criteria)) throw new KaiError(LABELS);
-  return { type: "choice", instructions, criteria };
+  return ask("choice", instructions, { criteria });
 }
 
 /**
  * A level of an ordered scale; the answer's `score` is the expected level.
  *
+ * @param instructions - The question; `null` or `undefined` sends none.
  * @param criteria - Each level's description, lowest first.
  */
-export function score<const T extends ScoreCriteria>(instructions: EntryType, criteria: T): ScoreQuestion<T> {
+export function score<const T extends ScoreCriteria>(
+  instructions: EntryType | null | undefined,
+  criteria: T,
+): ScoreQuestion<T> {
   if (!Array.isArray(criteria)) throw new KaiError(LEVELS);
-  return { type: "score", instructions, criteria };
+  return ask("score", instructions, { criteria });
 }
 
 /** Refuses what is wrong before it is sent: no questions, or criteria of the wrong shape. */

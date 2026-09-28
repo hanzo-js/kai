@@ -9,27 +9,42 @@ export class KaiError extends Error {
   }
 }
 
-/** The server's sentence, from any error body the gateway or the decision runtime sends. */
+/** FastAPI validation items as "where: what", joined; the leading "body" of each location dropped. */
+function items(detail: unknown[]): string | undefined {
+  const parts = detail.flatMap((d) => {
+    if (!record(d) || typeof d.msg !== "string") return [];
+    const where = Array.isArray(d.loc) ? d.loc.filter((p, i) => !(i === 0 && p === "body")).join(".") : "";
+    return [where ? `${where}: ${d.msg}` : d.msg];
+  });
+  return parts.length > 0 ? parts.join("; ") : undefined;
+}
+
+/** The server's sentence, from any error body the gateway, the native path or the compatible path sends. */
 function sentence(body: unknown): string | undefined {
   if (typeof body === "string") return body.trim().slice(0, 500) || undefined;
   if (!record(body)) return undefined;
-  const { error, msg, message } = body;
+  const { error, msg, message, detail } = body;
   if (record(error) && typeof error.message === "string") return error.message;
   if (typeof error === "string") return error;
   if (typeof msg === "string") return msg;
   if (typeof message === "string") return message;
+  if (typeof detail === "string") return detail;
+  if (Array.isArray(detail)) return items(detail);
   return undefined;
 }
 
+/** `error.code`, or the first FastAPI validation item's `type`. */
 function code(body: unknown): string | number | undefined {
-  const c = record(body) && record(body.error) ? body.error.code : undefined;
+  if (!record(body)) return undefined;
+  const first = Array.isArray(body.detail) ? body.detail[0] : undefined;
+  const c = record(body.error) ? body.error.code : record(first) ? first.type : undefined;
   return typeof c === "string" || typeof c === "number" ? c : undefined;
 }
 
 /** A response with a status outside 2xx. */
 export class APIError extends KaiError {
   readonly status: number;
-  /** `error.code` from the body, when it has one. */
+  /** `error.code`, or a FastAPI body's first `type`: a status, or a word such as `state_too_long`. */
   readonly code: string | number | undefined;
   /** From `x-request-id`. */
   readonly requestId: string | undefined;
@@ -64,21 +79,21 @@ export class APIError extends KaiError {
   }
 }
 
-/** 400: the request is malformed; the message names what to fix. */
+/** 400: malformed JSON or an unknown model. */
 export class BadRequestError extends APIError {}
 /** 401: the key is missing, wrong or revoked. */
 export class AuthenticationError extends APIError {}
-/** 402: no plan or no balance. */
+/** 402: insufficient balance. */
 export class PaymentRequiredError extends APIError {}
-/** 403: the key may not do this; a publishable key cannot decide. */
+/** 403: this kind of key may not call it, as a publishable `pk-` key. */
 export class PermissionDeniedError extends APIError {}
 /** 404: no such route or resource. */
 export class NotFoundError extends APIError {}
-/** 422: well formed, but the options do not fit the model's window. */
+/** 422: a request outside the schema, or a state past what the model reads (`code` `state_too_long`). */
 export class UnprocessableEntityError extends APIError {}
-/** 429: too many requests; `retryAfter` says how long to wait. */
+/** 429: rate limited or the queue is full; `retryAfter` says how long to wait. */
 export class RateLimitError extends APIError {}
-/** 500 and above: the server or its upstream failed. */
+/** 500 and above: failed upstream (502), not served here (503), overloaded (529, with `retryAfter`). */
 export class InternalServerError extends APIError {}
 
 /** No response arrived: DNS, TLS, a dropped connection, or a body cut short. */

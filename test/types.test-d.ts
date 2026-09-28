@@ -19,6 +19,15 @@ import {
   type Usage,
   type WithResponse,
 } from "@hanzo/kai";
+import {
+  type ChoiceResponse,
+  type Client,
+  type ModelCard,
+  type NoulResponse,
+  type Result,
+  type ScoreResponse,
+  choice as jevChoice,
+} from "@hanzo/kai/jev";
 
 type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2 ? true : false;
 const same = <A, B>(..._: Equal<A, B> extends true ? [] : [never]): void => {};
@@ -49,6 +58,7 @@ export async function inference(): Promise<void> {
   same<typeof d.answers.urgency.probabilities, { readonly 0: number; readonly 1: number }>();
   same<typeof d.answers.urgency.answer_confidence, number | undefined>();
   same<typeof d.answers.refund.action, { readonly act_probability: number } | undefined>();
+  same<typeof d.answers.refund.confidence, number | undefined>();
   same<typeof d.id, string>();
   same<typeof d.usage, Usage>();
   same<typeof d.usage.cost, number | undefined>();
@@ -112,12 +122,13 @@ export async function literals(): Promise<void> {
 }
 
 export function shapes(): void {
-  // @ts-expect-error instructions are required
   noul();
-  // @ts-expect-error instructions cannot be null
   noul(null);
-  // @ts-expect-error instructions are required on the wire
-  kai.decide({ state: "s", questions: { q: { type: "noul" } } });
+  choice(undefined, { yes: null, no: null });
+  score(null, ["low", "high"]);
+  kai.decide({ state: "s", questions: { q: { type: "noul" }, c: { type: "choice", criteria: ["a", "b"] } } });
+  // @ts-expect-error instructions are text, an object or a list
+  noul(3);
   // @ts-expect-error state cannot be null
   kai.decide({ state: null, questions: { q: noul("q?") } });
   // @ts-expect-error a number is not a description
@@ -175,4 +186,38 @@ export async function settings(): Promise<void> {
   kai.models.list({ maxRetries: 0 });
   // @ts-expect-error the key is private
   kai.apiKey;
+}
+
+declare const jev: Client;
+
+export async function compatible(): Promise<void> {
+  const r = await jev.systemOne({
+    state: "s",
+    questions: { a: noul("x"), b: jevChoice("y", { yes: null, no: "desc" }), c: score("z", ["bad", "ok"]) },
+  });
+  same<typeof r.answers.a, NoulResponse>();
+  same<NoulResponse, { readonly type: "noul"; readonly noul: number }>();
+  same<typeof r.answers.b, ChoiceResponse<{ readonly yes: null; readonly no: "desc" }>>();
+  same<typeof r.answers.b.choice, "yes" | "no">();
+  same<typeof r.answers.b.probabilities, { readonly yes: number; readonly no: number }>();
+  same<typeof r.answers.c, ScoreResponse<readonly ["bad", "ok"]>>();
+  same<typeof r.answers.c.legend, { readonly 0: "bad"; readonly 1: "ok" }>();
+  same<typeof r.model, string>();
+  same<typeof r.usage, Usage>();
+  // @ts-expect-error Jev's noul carries P(true) alone
+  r.answers.a.confidence;
+  // @ts-expect-error nor answer_confidence on a choice
+  r.answers.b.answer_confidence;
+  // @ts-expect-error no Kai metadata on this path
+  r.routing;
+  // @ts-expect-error no such question
+  r.answers.d;
+  const cards = await jev.models.list();
+  same<typeof cards, ModelCard[]>();
+  same<ModelCard, { readonly name: string; readonly description: string; readonly release_date: string }>();
+  const p = jev.systemOne({ state: "s", questions: { a: noul("a?") } });
+  same<typeof p, APIPromise<Result<{ readonly a: NoulQuestion }>>>();
+  same<typeof jev.defaultModel, string>();
+  // @ts-expect-error the native call is not on this client
+  jev.decide;
 }

@@ -19,6 +19,16 @@
         "default": "./dist/cjs/index.js"
       }
     },
+    "./jev": {
+      "import": {
+        "types": "./dist/esm/jev.d.ts",
+        "default": "./dist/esm/jev.js"
+      },
+      "require": {
+        "types": "./dist/cjs/jev.d.ts",
+        "default": "./dist/cjs/jev.js"
+      }
+    },
     "./package.json": "./package.json"
   },
   "files": [
@@ -33,8 +43,9 @@
   "scripts": {
     "build": "rm -rf dist && tsc -p tsconfig.esm.json && tsc -p tsconfig.cjs.json && printf '{\"type\":\"commonjs\"}\\n' > dist/cjs/package.json",
     "typecheck": "tsc -p tsconfig.json",
-    "test": "npm run build && npm run typecheck && node --test --test-reporter=tap \"test/*.test.ts\"",
-    "prepublishOnly": "npm test"
+    "test": "npm run build && npm run typecheck && node --test --test-reporter=tap \"test/**/*.test.ts\"",
+    "prepublishOnly": "npm test",
+    "conformance": "node scripts/conformance.mjs"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",

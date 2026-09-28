@@ -140,6 +140,23 @@ test("retry-after-ms wins over Retry-After, and an HTTP date counts from now", a
   assert.deepEqual(waits(log), [250, 4750, 2000]);
 });
 
+test("a 529 is retried after the wait it asks for, like a 429", async (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const { fetch, calls } = scripted((_, n) =>
+    n === 0 ? json({ error: { code: 529, message: "overloaded" } }, 529, { "retry-after-ms": "1500", "retry-after": "2" }) : json(MODELS),
+  );
+  const settled = kai(fetch).models.list().then((models) => models.length);
+  await flush();
+  t.mock.timers.tick(1499);
+  await flush();
+  assert.equal(calls.length, 1);
+  t.mock.timers.tick(1);
+  await flush();
+  assert.equal(calls.length, 2);
+  assert.equal(calls[1]?.headers.get("x-kai-retry-count"), "1");
+  assert.equal(await settled, 2);
+});
+
 test("a server wait over the cap is capped, per client or per call", async (t) => {
   t.mock.timers.enable({ apis: ["setTimeout"] });
   const log = recorder();
