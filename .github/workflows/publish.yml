@@ -10,6 +10,11 @@ on:
 permissions:
   contents: read
 
+# One publish at a time; a newer push replaces a publish still waiting for a runner.
+concurrency:
+  group: publish
+  cancel-in-progress: false
+
 jobs:
   publish:
     runs-on: [linux-amd64]
