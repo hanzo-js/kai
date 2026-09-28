@@ -1,0 +1,9 @@
+node_modules/
+dist/
+*.tgz
+
+# Local links to LLM.md
+CLAUDE.md
+AGENTS.md
+GEMINI.md
+QWEN.md

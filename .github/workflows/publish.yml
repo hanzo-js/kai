@@ -1,0 +1,77 @@
+# Publishes @hanzo/kai when npm does not serve this version yet; a version already there is skipped, so a
+# re-run is safe. The npm token is read from KMS at run time with the org's KMS_CLIENT_ID/KMS_CLIENT_SECRET.
+name: publish
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: [linux-amd64]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org/
+
+      - name: Skip a version npm already serves
+        id: check
+        run: |
+          name=$(jq -r .name package.json)
+          version=$(jq -r .version package.json)
+          if curl -fsS "https://registry.npmjs.org/${name}/${version}" > /dev/null 2>&1; then
+            echo "${name}@${version} is on npm; nothing to publish"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "${name}@${version} is not on npm; publishing"
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build and test
+        if: steps.check.outputs.skip != 'true'
+        run: |
+          npm ci
+          npm test
+
+      - name: Read NPM_TOKEN from KMS
+        id: token
+        if: steps.check.outputs.skip != 'true'
+        env:
+          KMS_CLIENT_ID: ${{ secrets.KMS_CLIENT_ID }}
+          KMS_CLIENT_SECRET: ${{ secrets.KMS_CLIENT_SECRET }}
+          KMS_ENDPOINT: ${{ vars.KMS_ENDPOINT || 'https://kms.hanzo.ai' }}
+          KMS_SECRET_ENV: ${{ vars.KMS_SECRET_ENV || 'prod' }}
+          KMS_NPM_PATH: ${{ vars.KMS_NPM_PATH || '' }}
+        run: |
+          if [ -z "${KMS_CLIENT_ID}" ] || [ -z "${KMS_CLIENT_SECRET}" ]; then
+            echo "::error::KMS_CLIENT_ID and KMS_CLIENT_SECRET are not set for this repository; the npm token cannot be read."
+            exit 1
+          fi
+          access=$(curl -fsS "${KMS_ENDPOINT}/v1/kms/auth/login" \
+            -H 'Content-Type: application/json' \
+            -d "{\"clientId\":\"${KMS_CLIENT_ID}\",\"clientSecret\":\"${KMS_CLIENT_SECRET}\"}" \
+            | jq -r '.accessToken // empty')
+          if [ -z "${access}" ]; then
+            echo "::error::KMS login failed at ${KMS_ENDPOINT}/v1/kms/auth/login."
+            exit 1
+          fi
+          url="${KMS_ENDPOINT}/v1/kms/secrets/${KMS_NPM_PATH:+${KMS_NPM_PATH}/}NPM_TOKEN?env=${KMS_SECRET_ENV}"
+          token=$(curl -sS "${url}" -H "Authorization: Bearer ${access}" | jq -r '.value // empty')
+          if [ -z "${token}" ]; then
+            echo "::error::KMS holds no NPM_TOKEN at ${url}."
+            exit 1
+          fi
+          echo "::add-mask::${token}"
+          echo "value=${token}" >> "$GITHUB_OUTPUT"
+
+      - name: Publish
+        if: steps.check.outputs.skip != 'true'
+        run: npm publish --access public --no-provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ steps.token.outputs.value }}

@@ -1,0 +1,11 @@
+# @hanzo/kai: read by the hanzoai/ci reusable (.github/workflows/cicd.yml). An npm package, no image;
+# .github/workflows/publish.yml ships it.
+
+test:
+  # Builds dist, typechecks sources, tests, examples and the type tests against it, then runs the suite on the
+  # built package, ESM and CommonJS. TAP, so every result is counted.
+  - name: npm test
+    run: |
+      set -euo pipefail
+      npm ci
+      npm test

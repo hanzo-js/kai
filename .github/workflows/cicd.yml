@@ -1,0 +1,15 @@
+# The caller; every knob is in /hanzo.yml. github.com reads workflows from .github/workflows only.
+name: CI/CD
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+concurrency:
+  group: cicd-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  cicd:
+    uses: hanzoai/ci/.github/workflows/build.yml@v2
+    secrets: inherit

@@ -1,0 +1,63 @@
+{
+  "name": "@hanzo/kai",
+  "version": "0.1.0",
+  "description": "TypeScript client for Kai decisions on api.hanzo.ai",
+  "license": "Apache-2.0",
+  "author": "Hanzo AI <dev@hanzo.ai>",
+  "type": "module",
+  "main": "./dist/cjs/index.js",
+  "module": "./dist/esm/index.js",
+  "types": "./dist/cjs/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/esm/index.d.ts",
+        "default": "./dist/esm/index.js"
+      },
+      "require": {
+        "types": "./dist/cjs/index.d.ts",
+        "default": "./dist/cjs/index.js"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "rm -rf dist && tsc -p tsconfig.esm.json && tsc -p tsconfig.cjs.json && printf '{\"type\":\"commonjs\"}\\n' > dist/cjs/package.json",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "npm run build && npm run typecheck && node --test --test-reporter=tap \"test/*.test.ts\"",
+    "prepublishOnly": "npm test"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "7.0.2"
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org",
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hanzo-js/kai.git"
+  },
+  "homepage": "https://docs.hanzo.ai/docs/kai",
+  "bugs": {
+    "url": "https://github.com/hanzo-js/kai/issues"
+  },
+  "keywords": [
+    "hanzo",
+    "kai",
+    "decisions",
+    "classification",
+    "typed",
+    "sdk"
+  ]
+}
