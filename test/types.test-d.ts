@@ -9,6 +9,7 @@ import {
   type Kai,
   type Model,
   type NoulAnswer,
+  type NoulLabels,
   type NoulQuestion,
   noul,
   type Question,
@@ -129,6 +130,12 @@ export function shapes(): void {
   kai.decide({ state: "s", questions: { q: { type: "noul" }, c: { type: "choice", criteria: ["a", "b"] } } });
   // @ts-expect-error instructions are text, an object or a list
   noul(3);
+  noul("Refund?", null, { true: "refund", false: "no refund" });
+  same<NoulLabels, { readonly true: string; readonly false: string }>();
+  // @ts-expect-error labels name the sides true and false
+  noul("Refund?", null, { yes: "refund", no: "no refund" });
+  // @ts-expect-error both sides need a word
+  noul("Refund?", null, { true: "refund" });
   // @ts-expect-error state cannot be null
   kai.decide({ state: null, questions: { q: noul("q?") } });
   // @ts-expect-error a number is not a description

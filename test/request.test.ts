@@ -120,6 +120,16 @@ test("instructions are optional: builders given none send none", async () => {
   });
 });
 
+test("a noul's labels, the words its two sides go by, reach the wire", async () => {
+  const words = { true: "refund", false: "no refund" };
+  assert.deepEqual(noul("Refund?", undefined, words), { type: "noul", instructions: "Refund?", labels: words });
+  const both = noul("Refund?", { true: "money back is asked for" }, words);
+  assert.deepEqual(both, { type: "noul", instructions: "Refund?", criteria: { true: "money back is asked for" }, labels: words });
+  const { kai, calls } = client();
+  await kai.decide({ state: "s", questions: { refund: both } });
+  assert.deepEqual((calls[0]?.body as { questions: unknown }).questions, { refund: both });
+});
+
 test("builders refuse criteria of the wrong shape", () => {
   const loose = (v: unknown) => v as never;
   assert.throws(() => score("Risk?", loose({ 0: "low", 1: "high" })), {

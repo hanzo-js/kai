@@ -139,6 +139,16 @@ export const RULES: Rule[] = [
       }),
   },
   {
+    name: "a native noul also takes labels, the words its two sides go by",
+    check: (c) =>
+      guard(async () => {
+        const refund = noul("Does the customer ask for money back?", undefined, { true: "refund", false: "no refund" });
+        const r = await c.kai.decide({ state: STATE, questions: { refund } });
+        const p = r.answers.refund.noul;
+        return r.answers.refund.type === "noul" && p >= 0 && p <= 1 ? [] : [`answer ${JSON.stringify(r.answers.refund)}`];
+      }),
+  },
+  {
     name: "a request holds 1 to 100 questions: 100 are answered, 101 refused with 422",
     check: (c) =>
       both(c, async (ask) => {

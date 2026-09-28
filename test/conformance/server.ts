@@ -57,6 +57,13 @@ function invalid(q: Json, compat: boolean): string | undefined {
   if (!map(q)) return "a question must be an object";
   const c = q.criteria;
   if (q.type === "noul") {
+    const words = q.labels;
+    if (words !== undefined) {
+      if (compat) return "labels is taken on /v1/decisions only";
+      if (!map(words) || Object.keys(words).sort().join() !== "false,true" || !Object.values(words).every((w) => typeof w === "string")) {
+        return "labels names 'true' and 'false'";
+      }
+    }
     if (c == null) return undefined;
     if (!map(c) || Object.keys(c).some((k) => k !== "true" && k !== "false")) return "noul criteria are keyed true and false";
     return undefined;
@@ -83,9 +90,10 @@ function options(q: Map): [string, Json][] {
   if (q.type === "choice") return map(c) ? Object.entries(c) : (c as string[]).map((l) => [l, null]);
   if (q.type === "score") return (c as Json[]).map((l, i) => [String(i), l]);
   const sides = map(c) ? c : {};
+  const words = map(q.labels) ? q.labels : { false: "false", true: "true" };
   return [
-    ["false", sides.false ?? null],
-    ["true", sides.true ?? null],
+    [String(words.false), sides.false ?? null],
+    [String(words.true), sides.true ?? null],
   ];
 }
 

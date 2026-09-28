@@ -14,9 +14,10 @@ in neither. Type-level parity with TypeSafe's `@typesafe-ai/sdk` 0.6.0 under our
 - `kai.decide<const Q>({ state, questions, model?, session_id?, user?, trace?, provider?, ...sent as given },
   { signal, timeout, retry, headers })` returns `APIPromise<Decision<Q>>`: awaiting parses once;
   `.withResponse()` gives `{ data, response, requestId }`; `.asResponse()` the unread `Response`.
-- Builders `choice(instructions, { label: description | null } | [label, …])`, `noul(instructions?, { true?, false? }?)`,
-  `score(instructions, [level0, …])`; labels and levels become literal types in the answers. Instructions are
-  optional (a builder given `null` or `undefined` sends none); score levels are non-null in the types.
+- Builders `choice(instructions, { label: description | null } | [label, …])`,
+  `noul(instructions?, { true?, false? }?, labels?)` (`NoulLabels` `{ true, false }`: the words the two sides go by,
+  /v1/decisions only), `score(instructions, [level0, …])`; labels and levels become literal types in the answers.
+  Instructions are optional (a builder given `null` or `undefined` sends none); score levels are non-null in the types.
 - `Decision`: `id`, `model`, `provider`, `answers`, `usage`, `routing`, `state_hash`, `latency_ms`. Answers:
   noul `noul`, `confidence` = |2p−1|; choice `choice`, `confidence`, `probabilities`; score `score`, `confidence`,
   `legend` and `probabilities` keyed `"0"`, `"1"`, …; all may carry `answer_confidence` and `action`. Unknown answer

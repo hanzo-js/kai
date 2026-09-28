@@ -4,6 +4,7 @@ import type {
   ChoiceCriteria,
   ChoiceQuestion,
   EntryType,
+  NoulLabels,
   NoulQuestion,
   Questions,
   ScoreCriteria,
@@ -23,9 +24,17 @@ function ask<Q>(type: string, instructions: EntryType | null | undefined, rest: 
  *
  * @param instructions - The question, or a statement Kai judges true or false; optional.
  * @param criteria - What true and false mean. Kai answers more reliably with them.
+ * @param labels - The words the two sides go by, as `{ true: "refund", false: "no refund" }`; /v1/decisions only.
  */
-export function noul(instructions?: EntryType | null, criteria?: NoulQuestion["criteria"]): NoulQuestion {
-  return ask("noul", instructions, criteria === undefined ? {} : { criteria });
+export function noul(
+  instructions?: EntryType | null,
+  criteria?: NoulQuestion["criteria"],
+  labels?: NoulLabels,
+): NoulQuestion {
+  return ask("noul", instructions, {
+    ...(criteria === undefined ? {} : { criteria }),
+    ...(labels === undefined ? {} : { labels }),
+  });
 }
 
 /**

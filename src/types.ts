@@ -15,6 +15,12 @@ export type EntryType = string | readonly JsonValue[] | { readonly [key: string]
 /** What an option means; `null` leaves a choice label undescribed. */
 export type Description = EntryType | null;
 
+/** The words a noul's two sides go by in the text Kai reads; their meaning stays yes and no. */
+export interface NoulLabels {
+  readonly true: string;
+  readonly false: string;
+}
+
 /** A yes/no question: `noul` answers P(true). */
 export interface NoulQuestion {
   readonly type: "noul";
@@ -22,6 +28,8 @@ export interface NoulQuestion {
   readonly instructions?: EntryType | null;
   /** What true and what false mean; either side, both, or neither. */
   readonly criteria?: { readonly true?: Description; readonly false?: Description } | null;
+  /** Words for the two sides, as `{ true: "refund", false: "no refund" }`; /v1/decisions only. */
+  readonly labels?: NoulLabels;
 }
 
 /** Choice labels, at least two: a map of label to description, or a list of labels. */
