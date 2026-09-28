@@ -10,10 +10,10 @@ on:
 permissions:
   contents: read
 
-# One publish at a time; a newer push replaces a publish still waiting for a runner.
+# One publish at a time, and the newest push replaces an older one, so what ships is main as it stands.
 concurrency:
   group: publish
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   publish:
