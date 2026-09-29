@@ -127,17 +127,25 @@ test("the path's FastAPI errors surface as the same classes, with the server's s
   }
 });
 
-test("models.list reads the models key of GET /v1/models", async () => {
-  const cards = [{ name: "kai", description: "Hanzo's decision model", release_date: "2026-09-28" }];
-  const { fetch, calls } = scripted(() => json({ object: "list", data: [{ id: "kai", outputs: ["decision"] }], models: cards }));
+test("models.list reads the decision models under data, as Jev's cards", async () => {
+  const kai = { object: "model", created: 1790629541, owned_by: "hanzo", outputs: ["decision"], pricing: { input: 0.021, output: 0 } };
+  const body = {
+    object: "list",
+    data: [{ id: "zen-1", object: "model", created: 1790629541, owned_by: "hanzo", outputs: ["text"] }, { id: "hanzo/kai", ...kai }, { id: "kai", ...kai }],
+    models: [],
+  };
+  const { fetch, calls } = scripted(() => json(body));
   const client = new TypeSafeClient({ apiKey: "sk-test", fetch });
-  assert.deepEqual(await client.models.list(), cards);
+  assert.deepEqual(await client.models.list(), [
+    { name: "hanzo/kai", description: "", release_date: "2026-09-28" },
+    { name: "kai", description: "", release_date: "2026-09-28" },
+  ]);
   assert.equal(calls[0]?.method, "GET");
   assert.ok(calls[0]?.url.endsWith("/v1/models"));
-  const bare = scripted(() => json({ object: "list", data: [] }));
+  const bare = scripted(() => json({ object: "list", models: [{ name: "kai", description: "d", release_date: "2026-09-28" }] }));
   await assert.rejects(new TypeSafeClient({ apiKey: "sk-test", fetch: bare.fetch }).models.list(), {
     name: "KaiError",
-    message: "GET /v1/models answered without a 'models' list",
+    message: "GET /v1/models answered without a 'data' list",
   });
 });
 

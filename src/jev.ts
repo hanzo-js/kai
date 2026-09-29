@@ -1,10 +1,8 @@
 // @hanzo/kai/jev: the Jev-compatible layer. A TypeSafe program ports by changing its import:
 //   import { choice, noul, score, Client as TypeSafeClient } from "@hanzo/kai/jev";
-import { answered } from "./client.js";
+import { answered, catalog } from "./client.js";
 import { ENV as ALL } from "./env.js";
-import { KaiError } from "./errors.js";
 import { Http, settings } from "./http.js";
-import { record } from "./json.js";
 import type { APIPromise } from "./promise.js";
 import { check } from "./questions.js";
 import type {
@@ -116,22 +114,29 @@ export interface Result<Q extends Questions = Questions> {
   readonly usage: Usage;
 }
 
-/** A decision model as GET /v1/models lists it under `models`. */
+/** A decision model in Jev's card shape. */
 export interface ModelCard {
+  /** The model's id. */
   readonly name: string;
+  /** Empty: the catalogue carries none. */
   readonly description: string;
+  /** The UTC date of the model's `created` time, `YYYY-MM-DD`. */
   readonly release_date: string;
 }
 
 /** The models resource. */
 export interface Models {
-  /** The `models` list of GET /v1/models. */
+  /** The decision models of GET /v1/models, read from its `data` list, as Jev's cards. */
   list(options?: RequestOptions): APIPromise<ModelCard[]>;
 }
 
+/** The decision models as cards: name the id, description empty, release_date the day of `created`. */
 function cards(data: unknown): ModelCard[] {
-  if (!record(data) || !Array.isArray(data.models)) throw new KaiError("GET /v1/models answered without a 'models' list");
-  return data.models.filter((m): m is ModelCard => record(m));
+  return catalog(data).map((m) => ({
+    name: m.id,
+    description: "",
+    release_date: Number.isFinite(m.created) ? new Date(m.created * 1000).toISOString().slice(0, 10) : "",
+  }));
 }
 
 /** Client for POST /v1/systemone, the path that answers as Jev does. */

@@ -85,9 +85,13 @@ A status outside 2xx throws its class, carrying the server's sentence as `messag
 | 402 insufficient balance | `PaymentRequiredError` |
 | 403 key kind not allowed | `PermissionDeniedError` |
 | 404 | `NotFoundError` |
-| 422 outside the schema, or `code` `state_too_long` | `UnprocessableEntityError` |
+| 422 outside the schema, or over reach | `UnprocessableEntityError` |
 | 429 rate limited | `RateLimitError` |
 | 5xx, 529 overloaded | `InternalServerError` |
+
+A refusal over reach names what is over in `code`, on either path: `state_too_long` (the state with a question
+does not fit what the model reads), `question_too_long` (a question over half of it), `option_too_long` (an
+option over 512 tokens), `request_too_long` (a body over 16 MiB).
 
 No response throws `APIConnectionError`, or `APITimeoutError` past the timeout; an aborted signal throws
 `APIUserAbortError`. Every class extends `KaiError`.
@@ -113,7 +117,10 @@ const models = await kai.models.list(); // the models that answer decisions: kai
 ## Jev compatibility
 
 `@hanzo/kai/jev` answers in Jev's shapes on `/v1/systemone`, so a TypeSafe program ports by its import alone:
-`import { choice, noul, score, Client as TypeSafeClient } from "@hanzo/kai/jev"`. It answers model `kai` only.
+`import { choice, noul, score, Client as TypeSafeClient } from "@hanzo/kai/jev"`. Model `kai` answers with Kai's
+versioned id, `kai-` and the first 12 hex digits of its weights' SHA-256, which both paths also take; a bare Jev id
+such as `jev-latest` is refused with 400, while `typesafe/jev-1.13` and `~typesafe/jev-latest` reach Jev itself,
+billed at \$0.042 per 1M input tokens. `models.list()` gives the decision models as Jev's cards.
 
 ## License
 

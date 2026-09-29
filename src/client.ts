@@ -30,8 +30,8 @@ export function answered(data: unknown, logger: Logger, route: string): Record<s
   return { ...data, answers };
 }
 
-/** The models whose outputs include "decision". */
-function catalog(data: unknown): Model[] {
+/** The models of a GET /v1/models body whose outputs include "decision". */
+export function catalog(data: unknown): Model[] {
   if (!record(data) || !Array.isArray(data.data)) throw new KaiError("GET /v1/models answered without a 'data' list");
   return data.data.filter(
     (m): m is Model => record(m) && Array.isArray(m.outputs) && m.outputs.includes("decision"),

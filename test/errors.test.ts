@@ -170,3 +170,23 @@ test("a 529 is a server error that says when to come back", async () => {
   assert.equal(error.message, "overloaded");
   assert.equal(error.retryAfter, 1.5);
 });
+
+test("a refusal over reach names what is over in code, on either path's body", async () => {
+  const reach: [string, string, (string | number)[]][] = [
+    ["state_too_long", "the state takes 131073 tokens; the wire carries at most 131072", ["body", "state"]],
+    ["question_too_long", 'question "q" takes 700 tokens with its type line; kai-a211cc701038 reads at most 512', ["body", "questions", "q", "noul", "instructions"]],
+    ["option_too_long", 'option "a" of question "q" takes 900 tokens; kai-a211cc701038 reads an option whole up to 512', ["body", "questions", "q", "choice", "criteria", "a"]],
+    ["request_too_long", "the body is over 16777216 bytes", ["body"]],
+  ];
+  for (const [name, message, loc] of reach) {
+    const native = await failure(422, JSON.stringify({ error: { code: name, message } }), JSON_TYPE);
+    assert.ok(native instanceof UnprocessableEntityError);
+    assert.equal(native.code, name);
+    assert.equal(native.message, message);
+    const compat = await failure(422, JSON.stringify({ detail: [{ loc, msg: message, type: name }] }), JSON_TYPE);
+    assert.ok(compat instanceof UnprocessableEntityError);
+    assert.equal(compat.code, name);
+    const where = loc.slice(1).join(".");
+    assert.equal(compat.message, where ? `${where}: ${message}` : message);
+  }
+});

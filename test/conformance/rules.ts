@@ -86,6 +86,12 @@ async function refused(p: Promise<unknown>, kind: typeof APIError, test?: (e: AP
   }
 }
 
+/** The failures of a refusal over reach: `code` names what is over, and the message says by how much. */
+function reached(e: APIError, name: string): string[] {
+  const out = e.code === name ? [] : [`code ${JSON.stringify(e.code)}, expected ${name}`];
+  return /\d/.test(e.message) ? out : [...out, `message names no size: ${JSON.stringify(e.message)}`];
+}
+
 function paths(c: Clients): [string, Ask][] {
   return [
     ["native", (questions, state = STATE) => c.kai.decide({ state: state as EntryType, questions }) as Promise<unknown> as Promise<Reply>],
@@ -118,11 +124,20 @@ export const RULES: Rule[] = [
     },
   },
   {
-    name: "compat answers model kai under Kai's versioned id",
+    name: "the versioned id kai-<12 hex of the weights' sha256> is taken on both paths and names the compat answer",
     check: (c) =>
       guard(async () => {
-        const r = await c.jev.systemOne({ model: "kai", state: STATE, questions: { team: TEAM } });
-        return /kai/.test(r.model) && r.model !== "kai" ? [] : [`model ${JSON.stringify(r.model)}`];
+        const first = await c.kai.decide({ state: STATE, questions: { team: TEAM } });
+        const versioned = `kai-${(first.routing.sha256 ?? "").slice(0, 12)}`;
+        if (!/^kai-[0-9a-f]{12}$/.test(versioned)) return [`routing.sha256 ${JSON.stringify(first.routing.sha256)} names no id`];
+        const out: string[] = [];
+        const native = await c.kai.decide({ model: versioned, state: STATE, questions: { team: TEAM } });
+        if (native.answers.team.type !== "choice") out.push(`native ${versioned}: no choice answered`);
+        for (const model of ["kai", versioned]) {
+          const r = await c.jev.systemOne({ model, state: STATE, questions: { team: TEAM } });
+          if (!/^kai-[0-9a-f]{12}$/.test(r.model) || r.model !== versioned) out.push(`compat ${model}: model ${JSON.stringify(r.model)}, expected ${versioned}`);
+        }
+        return out;
       }),
   },
   {
@@ -247,12 +262,36 @@ export const RULES: Rule[] = [
   {
     name: "a state past what the model reads is refused with 422 state_too_long",
     check: (c) =>
-      both(c, (ask, path) =>
-        refused(ask({ team: TEAM }, Array.from({ length: 20_000 }, (_, i) => `word${i % 97}`).join(" ")), UnprocessableEntityError, (e) => {
-          const out = /\d/.test(e.message) ? [] : [`message names no token counts: ${JSON.stringify(e.message)}`];
-          return path === "native" && e.code !== "state_too_long" ? [...out, `code ${JSON.stringify(e.code)}`] : out;
-        }),
+      both(c, (ask) =>
+        refused(ask({ team: TEAM }, Array.from({ length: 20_000 }, (_, i) => `word${i % 97}`).join(" ")), UnprocessableEntityError, (e) =>
+          reached(e, "state_too_long"),
+        ),
       ),
+  },
+  {
+    name: "a question over half of what the model reads is refused with 422 question_too_long",
+    check: (c) =>
+      both(c, (ask) =>
+        refused(ask({ long: noul(Array.from({ length: 6_000 }, (_, i) => `clause${i % 89}`).join(" ")) }), UnprocessableEntityError, (e) =>
+          reached(e, "question_too_long"),
+        ),
+      ),
+  },
+  {
+    name: "an option over 512 tokens is refused with 422 option_too_long",
+    check: (c) =>
+      both(c, (ask) =>
+        refused(
+          ask({ team: choice("Which team should handle `ticket`?", { billing: Array.from({ length: 1_500 }, (_, i) => `charge${i % 83}`).join(" "), technical: null }) }),
+          UnprocessableEntityError,
+          (e) => reached(e, "option_too_long"),
+        ),
+      ),
+  },
+  {
+    name: "a body over 16 MiB is refused with 422 request_too_long",
+    check: (c) =>
+      both(c, (ask) => refused(ask({ team: TEAM }, "x".repeat(17 << 20)), UnprocessableEntityError, (e) => reached(e, "request_too_long"))),
   },
   {
     name: "native noul confidence is |2p - 1|",
@@ -342,14 +381,15 @@ export const RULES: Rule[] = [
     ],
   },
   {
-    name: "GET /v1/models lists the decision models under models, and data as before",
+    name: "GET /v1/models lists the decision models under data; the jev layer shows them as Jev's cards",
     check: (c) =>
       guard(async () => {
+        const ids = (await c.kai.models.list()).map((m) => m.id);
+        const out = ids.includes("kai") ? [] : [`data holds ${ids.join(", ")}`];
         const cards = await c.jev.models.list();
         const kai = cards.find((m) => m.name === "kai");
-        const out = kai && typeof kai.description === "string" && typeof kai.release_date === "string" ? [] : [`models ${JSON.stringify(cards)}`];
-        const ids = (await c.kai.models.list()).map((m) => m.id);
-        return ids.includes("kai") ? out : [...out, `data holds ${ids.join(", ")}`];
+        const shaped = kai && kai.description === "" && /^\d{4}-\d{2}-\d{2}$/.test(kai.release_date);
+        return shaped ? out : [...out, `cards ${JSON.stringify(cards)}`];
       }),
   },
   {
@@ -366,6 +406,7 @@ export const RULES: Rule[] = [
       const failing: [string, () => Promise<unknown>][] = [
         ["native 422", () => c.kai.decide({ state: null as never, questions: { team: TEAM } })],
         ["compat 400", () => c.jev.systemOne({ model: "jev-latest", state: STATE, questions: { team: TEAM } })],
+        ["compat 422", () => c.jev.systemOne({ state: null as never, questions: { team: TEAM } })],
       ];
       for (const [what, send] of failing) {
         const e = await send().then(

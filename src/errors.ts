@@ -44,7 +44,10 @@ function code(body: unknown): string | number | undefined {
 /** A response with a status outside 2xx. */
 export class APIError extends KaiError {
   readonly status: number;
-  /** `error.code`, or a FastAPI body's first `type`: a status, or a word such as `state_too_long`. */
+  /**
+   * `error.code`, or a FastAPI body's first `type`: the status, or for a refusal over reach its name,
+   * `state_too_long`, `question_too_long`, `option_too_long` or `request_too_long`.
+   */
   readonly code: string | number | undefined;
   /** From `x-request-id`. */
   readonly requestId: string | undefined;
@@ -89,7 +92,11 @@ export class PaymentRequiredError extends APIError {}
 export class PermissionDeniedError extends APIError {}
 /** 404: no such route or resource. */
 export class NotFoundError extends APIError {}
-/** 422: a request outside the schema, or a state past what the model reads (`code` `state_too_long`). */
+/**
+ * 422: a request outside the schema, or over reach, `code` naming what is over: `state_too_long` (the state with a
+ * question does not fit what the model reads), `question_too_long` (a question over half of it), `option_too_long`
+ * (an option over 512 tokens), `request_too_long` (a body over 16 MiB).
+ */
 export class UnprocessableEntityError extends APIError {}
 /** 429: rate limited or the queue is full; `retryAfter` says how long to wait. */
 export class RateLimitError extends APIError {}

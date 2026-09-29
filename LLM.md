@@ -25,8 +25,15 @@ in neither. Type-level parity with TypeSafe's `@typesafe-ai/sdk` 0.6.0 under our
 - `kai.models.list()`: entries of `GET /v1/models` whose `outputs` include `"decision"` (today `kai`, `hanzo/kai`).
 - Client-side checks only: at least one question, score criteria a list, choice criteria a map or a list. Every
   other rule is the server's (contract.md, frozen): 1..=100 questions, a choice ≥ 2 labels, a score ≥ 1 level and
-  no null level; `/v1/systemone` caps labels at 255 and levels at 10, native caps neither; a state past what the
-  model reads is 422 `state_too_long`; schema errors are 422.
+  no null level; `/v1/systemone` caps labels at 255 and levels at 10, native caps neither; schema errors are 422.
+- Reach refusals are 422 with `code` a name, on both paths (native `error.code`, compat `detail[0].type`):
+  `state_too_long` (state with a question over what the model reads; wire ceiling 128k tokens), `question_too_long`
+  (a question with its type line over half the checkpoint's `max_len`), `option_too_long` (an option over 512
+  tokens), `request_too_long` (a body over 16 MiB). Other errors carry the status as `code`.
+- Model ids: `kai`, `hanzo/kai`, and the versioned `kai-<first 12 hex of the weights' sha256>` (from
+  `routing.sha256`), taken on both paths; `/v1/systemone` answers `model` with the versioned id.
+  `typesafe/jev-1.13` and `~typesafe/jev-latest` reach Jev through OpenRouter on both paths, billed at $0.042 per
+  1M input tokens; bare Jev ids are 400 `Unknown model` on `/v1/systemone`.
 - Errors: `KaiError` ⊃ `APIError` (`status`, `code`, `message` = the server's sentence, `requestId` from
   `x-request-id`, `body`, `retryAfter` in seconds, `headers`) with 400 `BadRequestError`, 401
   `AuthenticationError`, 402 `PaymentRequiredError`, 403 `PermissionDeniedError`, 404 `NotFoundError`, 422
@@ -43,7 +50,8 @@ in neither. Type-level parity with TypeSafe's `@typesafe-ai/sdk` 0.6.0 under our
 - Wire facts: with model `hanzo/kai` the gateway re-encodes the body with sorted keys, so everything is read by name.
 - `@hanzo/kai/jev` (`src/jev.ts`, its own `exports` entry): `Client` with TypeSafe's `systemOne({state, questions, model?})`
   on `POST /v1/systemone`, `defaultModel` `kai`, Jev's answer shapes (`NoulResponse`, `ChoiceResponse`, `ScoreResponse`,
-  `Result<Q>`), `models.list()` from the `models` key; no TypeSafe brand name is exported.
+  `Result<Q>`), `models.list()` reading `data` (never the gateway's `models`, which stays `[]`) as Jev's cards:
+  name = id, description empty, release_date = the UTC day of `created`; no TypeSafe brand name is exported.
 
 ## Layout
 
