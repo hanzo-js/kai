@@ -146,7 +146,7 @@ export function contract(): Fetch {
     };
     if (new Headers(init?.headers).get("authorization") !== `Bearer ${KEY}`) return fail(401, "invalid API key");
     if (path === "/v1/models") {
-      const kai = { object: "model", created: 1790629541, owned_by: "hanzo", outputs: ["decision"], pricing: { input: 0.021, output: 0 } };
+      const kai = { object: "model", created: 1790629541, owned_by: "hanzo", outputs: ["decision"], pricing: { prompt: "0.000000021", completion: "0", input_per_million: 0.021, output_per_million: 0 } };
       return reply(200, {
         object: "list",
         data: [{ id: "hanzo/kai", ...kai }, { id: "kai", ...kai }],

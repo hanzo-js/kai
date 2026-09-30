@@ -174,14 +174,24 @@ export interface DecisionRequest<Q extends Questions = Questions> {
   provider?: JsonValue;
 }
 
+/** A model's list prices in US dollars. */
+export interface Pricing {
+  /** Per input token, as a decimal string (OpenRouter's key and unit). */
+  readonly prompt: string;
+  /** Per output token, as a decimal string. */
+  readonly completion: string;
+  readonly input_per_million: number;
+  readonly output_per_million: number;
+}
+
 /** A model that answers decisions. */
 export interface Model {
   readonly id: string;
   readonly owned_by: string;
   /** Unix seconds. */
   readonly created: number;
-  /** USD per million tokens. */
-  readonly pricing: { readonly input: number; readonly output: number };
+  /** List prices in USD, per token and per million tokens. */
+  readonly pricing: Pricing;
 }
 
 /** The models resource. */

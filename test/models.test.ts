@@ -14,7 +14,7 @@ test("models.list keeps the models whose outputs include decision", async () => 
   const [first] = models;
   assert.equal(first?.owned_by, "hanzo");
   assert.equal(first?.created, 1790629541);
-  assert.deepEqual(first?.pricing, { input: 0.021, output: 0 });
+  assert.deepEqual(first?.pricing, { prompt: "0.000000021", completion: "0", input_per_million: 0.021, output_per_million: 0 });
   const { data, requestId, response } = await kai.models.list().withResponse();
   assert.equal(data.length, 2);
   assert.equal(requestId, "9add3e1e");

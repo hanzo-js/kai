@@ -121,7 +121,7 @@ export const MODELS = {
       premium: true,
       context_window: 131072,
       outputs: ["text"],
-      pricing: { input: 0.96, output: 1.92 },
+      pricing: { prompt: "0.00000096", completion: "0.00000192", input_per_million: 0.96, output_per_million: 1.92 },
     },
     {
       id: "hanzo/kai",
@@ -130,7 +130,7 @@ export const MODELS = {
       owned_by: "hanzo",
       premium: false,
       outputs: ["decision"],
-      pricing: { input: 0.021, output: 0 },
+      pricing: { prompt: "0.000000021", completion: "0", input_per_million: 0.021, output_per_million: 0 },
     },
     { id: "legacy/none", object: "model", created: 1790629541, owned_by: "legacy", outputs: null },
     {
@@ -140,7 +140,7 @@ export const MODELS = {
       owned_by: "hanzo",
       premium: false,
       outputs: ["decision"],
-      pricing: { input: 0.021, output: 0 },
+      pricing: { prompt: "0.000000021", completion: "0", input_per_million: 0.021, output_per_million: 0 },
     },
   ],
 };

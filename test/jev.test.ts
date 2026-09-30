@@ -128,7 +128,7 @@ test("the path's FastAPI errors surface as the same classes, with the server's s
 });
 
 test("models.list reads the decision models under data, as Jev's cards", async () => {
-  const kai = { object: "model", created: 1790629541, owned_by: "hanzo", outputs: ["decision"], pricing: { input: 0.021, output: 0 } };
+  const kai = { object: "model", created: 1790629541, owned_by: "hanzo", outputs: ["decision"], pricing: { prompt: "0.000000021", completion: "0", input_per_million: 0.021, output_per_million: 0 } };
   const body = {
     object: "list",
     data: [{ id: "zen-1", object: "model", created: 1790629541, owned_by: "hanzo", outputs: ["text"] }, { id: "hanzo/kai", ...kai }, { id: "kai", ...kai }],

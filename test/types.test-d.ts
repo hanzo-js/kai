@@ -174,7 +174,7 @@ export function promises(): void {
 
 export async function settings(): Promise<void> {
   const models = await kai.models.list();
-  same<Model, { readonly id: string; readonly owned_by: string; readonly created: number; readonly pricing: { readonly input: number; readonly output: number } }>();
+  same<Model, { readonly id: string; readonly owned_by: string; readonly created: number; readonly pricing: { readonly prompt: string; readonly completion: string; readonly input_per_million: number; readonly output_per_million: number } }>();
   // @ts-expect-error a model is read-only
   models[0]!.id = "x";
   // @ts-expect-error the client's settings are read-only
